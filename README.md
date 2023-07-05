@@ -65,4 +65,34 @@ request a code review.
   - prod.api.test.ts (for validating the prod API server)
   - prod.bridge.test.ts (for validating the prod bridge instances)
 
+# Subsystems, Invariants, and Patterns
 
+For each of these things we need to write down the core of:
+
+- what patterns are we following?
+- how are we keeping track of these patterns?
+- what invariants are we enforcing?
+- how are we testing these invariants?
+
+* CI/CD -- TODO
+* Static analysis -- TODO
+* Auth -- TODO
+* Logging -- TODO
+* Monitoring (Application) -- TODO
+* Monitoring (Infrastructure) -- TODO
+* Alerting -- TODO
+* HTTP Server -- TODO
+* RDBMS -- TODO
+* Testing -- TODO
+
+* XMTP -- TODO
+* Express -- TODO
+* Prisma -- TODO
+* Nginx -- TODO
+* LetsEncrypt -- TODO
+* Docker -- TODO
+* Sentry -- TODO
+* Mocha -- TODO
+* NPM -- TODO
+* ENV/shell -- TODO
+* Next.js -- TODO
