@@ -6,6 +6,7 @@ import { prisma } from "../db.js";
 import { BRIDGE_HEARTBEAT_TIMEOUT_MS } from "../canary.js";
 import * as Env from "../env.js";
 import { Wallet } from "@ethersproject/wallet";
+import { sentry } from "../apis/sentry.js";
 
 const BRIDGE_ADRESS = Env.read({
   key: "XMTPB_BRIDGE_ADDRESS",
@@ -36,19 +37,24 @@ const WEBHOOK_ADDRESS = (() => {
   } else {
     (async () => {
       setInterval(async () => {
-        prisma.instance.update({
-          where: {
-            bridgeId: bridgeConfig.id,
-          },
-          data: {
-            heartbeat: new Date(),
-          },
-        });
+        try {
+          prisma.instance.update({
+            where: {
+              bridgeId: bridgeConfig.id,
+            },
+            data: {
+              heartbeat: new Date(),
+            },
+          });
+        } catch (e) {
+          // TODO - What to do here? If the heartbeat never comes back, we will
+          // be alerted, so doing nothing is maybe ok?
+        }
       }, BRIDGE_HEARTBEAT_TIMEOUT_MS / 2);
     })();
 
     const server = await bridge({
-      sentry: Env.sentry,
+      sentry,
       privateKey: bridgeConfig.bootKey,
     });
 

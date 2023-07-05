@@ -6,6 +6,7 @@ import * as Bridge from "../bridge.js";
 import { prisma } from "../db.js";
 import { Wallet } from "@ethersproject/wallet";
 import { v4 as uuid } from "uuid";
+import { sentry } from "../apis/sentry.js";
 
 const SIGNUP_KEY = Env.read({ key: "XMTPB_SIGNUP_KEY", schema: z.string() });
 const PORT = Env.read({ key: "XMTPB_API_PORT", schema: z.string() });
@@ -13,34 +14,23 @@ const WEBHOOK_KEY = Env.read({ key: "XMTPB_WEBHOOK_KEY", schema: z.string() });
 
 const bridge = Bridge.bridge({
   privateKey: WEBHOOK_KEY,
-  sentry: Env.sentry,
+  sentry,
 });
 
 const app = express();
 
+app.use(sentry.Handlers.requestHandler());
+
 app.use(express.json());
 
-const handleUnknownError = (error: unknown, res: Response) => {
-  res.status(500).send({
-    ok: false,
-    error: (() => {
-      if (error instanceof Error) {
-        return error;
-      } else {
-        return new Error("Unknown error");
-      }
-    })(),
-  });
-};
-
-app.get("/", async (req, res) => {
+app.get("/", async (req, res, next) => {
   try {
     res.send({
       ok: true,
       data: "Hello from the Relay XMTP Bridge API!",
     });
   } catch (e) {
-    handleUnknownError(e, res);
+    next(e);
   }
 });
 
@@ -50,7 +40,7 @@ const zCanaryBody = z.object({
   }),
 });
 
-app.post("/canary", async (req, res) => {
+app.post("/canary", async (req, res, next) => {
   try {
     const validatedBody = zCanaryBody.safeParse(req.body);
 
@@ -67,7 +57,7 @@ app.post("/canary", async (req, res) => {
       data: `Hello from the proxied server! Your message was: ${validatedBody.data.message.content}`,
     });
   } catch (e) {
-    handleUnknownError(e, res);
+    next(e);
   }
 });
 
@@ -78,7 +68,7 @@ const zHookBody = z.object({
   token: z.string(),
 });
 
-app.post("/hook", async (req, res) => {
+app.post("/hook", async (req, res, next) => {
   try {
     const validatedBody = zHookBody.safeParse(req.body);
 
@@ -124,17 +114,25 @@ app.post("/hook", async (req, res) => {
       }),
     });
 
-    res.send({
-      ok: true,
-      forwardedToBridge: sent.recipientAddress,
-      forwardedMessage: {
-        id: sent.id,
-        content: sent.content,
-        recipientAddress: sent.recipientAddress,
-      },
-    });
+    if (sent === null) {
+      res.status(500).send({
+        ok: false,
+        error: "Failed to send message",
+      });
+      return;
+    } else {
+      res.send({
+        ok: true,
+        forwardedToBridge: sent.recipientAddress,
+        forwardedMessage: {
+          id: sent.id,
+          content: sent.content,
+          recipientAddress: sent.recipientAddress,
+        },
+      });
+    }
   } catch (e) {
-    handleUnknownError(e, res);
+    next(e);
   }
 });
 
@@ -146,7 +144,7 @@ const zSignupBody = z.object({
   }),
 });
 
-app.post("/signup", async (req, res) => {
+app.post("/signup", async (req, res, next) => {
   try {
     const validatedBody = zSignupBody.safeParse(req.body);
 
@@ -190,7 +188,7 @@ app.post("/signup", async (req, res) => {
       hookToken: createdBridge.hookToken,
     });
   } catch (e) {
-    handleUnknownError(e, res);
+    next(e);
   }
 });
 
@@ -200,7 +198,7 @@ const zGetInstanceBody = z.object({
 });
 
 /* TODO This is a hack because I don't want to use proper auth right now. */
-app.post("/instance", async (req, res) => {
+app.post("/instance", async (req, res, next) => {
   try {
     const validatedBody = zGetInstanceBody.safeParse(req.body);
 
@@ -234,9 +232,11 @@ app.post("/instance", async (req, res) => {
       instance,
     });
   } catch (e) {
-    handleUnknownError(e, res);
+    next(e);
   }
 });
+
+app.use(sentry.Handlers.errorHandler());
 
 app.listen(PORT, () => {
   console.log(`Boot service listening on port ${PORT}`);

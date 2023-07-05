@@ -24,7 +24,7 @@ export type Send = ({
   toAddress: string;
   toConversationId?: string;
   msg: string;
-}) => Promise<DecodedMessage>;
+}) => Promise<DecodedMessage | null>;
 
 export type Handler = ({
   bridge,
@@ -60,22 +60,35 @@ export const bridge = async (opts: {
   })();
 
   const send: Send = async ({ toAddress, toConversationId, msg }) => {
-    const conversation = await client.conversations.newConversation(
-      toAddress,
-      (() => {
-        if (toConversationId === undefined) {
-          return undefined;
-        } else {
-          return {
-            conversationId: toConversationId,
-            metadata: {},
-          };
-        }
-      })()
-    );
+    const transaction = opts.sentry.startTransaction({
+      name: "bridge-send",
+    });
 
-    return conversation.send(msg);
+    try {
+      const conversation = await client.conversations.newConversation(
+        toAddress,
+        (() => {
+          if (toConversationId === undefined) {
+            return undefined;
+          } else {
+            return {
+              conversationId: toConversationId,
+              metadata: {},
+            };
+          }
+        })()
+      );
+
+      return conversation.send(msg);
+    } catch (error) {
+      opts.sentry.captureException(error);
+    } finally {
+      transaction.finish();
+    }
+
+    return null;
   };
+
   return {
     sentry: opts.sentry,
     address: client.address,
@@ -91,7 +104,7 @@ export const reply = ({ to, msg }: { to: DecodedMessage; msg: string }) => {
 export const addHandler = (bridge: Bridge, handler: Handler) => {
   bridge.listeners.push(({ message }) => {
     const transaction = bridge.sentry.startTransaction({
-      name: "bridge",
+      name: "bridge-handler",
     });
 
     try {

@@ -1,20 +1,16 @@
 /* eslint-disable no-console */
 import { z } from "zod";
-import * as Sentry from "@sentry/node";
-
-Sentry.init({
-  dsn: process.env.XMTPB_SENTRY_DSN,
-});
-
-export const sentry = Sentry;
 
 const ENV_REGISTRY = {
+  XMTPB_SENTRY_DSN: process.env.XMTPB_SENTRY_DSN,
+  XMTPB_GITHUB_SHA: process.env.XMTPB_GITHUB_SHA,
   XMTPB_SIGNUP_KEY: process.env.XMTPB_SIGNUP_KEY,
   XMTPB_WEBHOOK_KEY: process.env.XMTPB_WEBHOOK_KEY,
   XMTPB_BRIDGE_ADDRESS: process.env.XMTPB_BRIDGE_ADDRESS,
   XMTPB_API_PORT: process.env.XMTPB_API_PORT,
   XMTPB_FORWARD_HANDLER_HTTP_URL: process.env.XMTPB_FORWARD_HANDLER_HTTP_URL,
   XMTPB_FORWARD_HANDLER_IS_BOT: process.env.XMTPB_FORWARD_HANDLER_IS_BOT,
+  XMTPB_ENVIRONMENT: process.env.XMTPB_ENVIRONMENT,
 } as const;
 
 for (const [key, value] of Object.entries(ENV_REGISTRY)) {
