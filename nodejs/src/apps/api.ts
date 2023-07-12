@@ -2,7 +2,7 @@
 import express, { Response } from "express";
 import * as Env from "../env.js";
 import { z } from "zod";
-import * as Bridge from "../bridge.js";
+import * as Bridge from "../interfaces/xmtp.js";
 import { prisma } from "../db.js";
 import { Wallet } from "@ethersproject/wallet";
 import { v4 as uuid } from "uuid";

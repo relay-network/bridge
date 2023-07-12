@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { DecodedMessage } from "@xmtp/xmtp-js";
 import fetch from "node-fetch";
-import { parse } from "./lib.js";
-import { Bridge, reply } from "./bridge.js";
+import { parse } from "./util.js";
+import { Bridge, reply } from "./interfaces/xmtp.js";
 
 /* TODO -- This should be documented, HTTP targets MUST accept the following
  * request format. */

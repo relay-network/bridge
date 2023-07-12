@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DecodedMessage } from "@xmtp/xmtp-js";
-import { parse, zJsonString } from "./lib.js";
-import { Bridge } from "./bridge.js";
+import { parse, zJsonString } from "./util.js";
+import { Bridge } from "./interfaces/xmtp.js";
 
 const zSourceRequest = z.object({
   conversation: z.object({
