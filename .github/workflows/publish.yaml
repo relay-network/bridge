@@ -1,0 +1,21 @@
+name: bridge_deploy
+
+on:
+  push:
+    branches:
+      - master
+jobs:
+  deploy-api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Publish Docker image
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          docker build -f docker/Dockerfile.express nodejs -t ghcr.io/relay-network/xmtp-bridge:${{ env.GITHUB_SHA }}
+          docker push 
+

@@ -199,3 +199,26 @@ if [ -z "${_XMTPB_DROPLET_IP}" ]; then
 fi
 
 export XMTPB_DROPLET_IP=${_XMTPB_DROPLET_IP}
+
+#
+# XMTPB_GIT_HASH is the git hash of the current commit
+#
+#
+
+if [ -z "${_XMTPB_GIT_HASH}" ]; then
+  echo "WARNING :: XMTPB_GIT_HASH is not set"
+fi
+
+export XMTPB_GIT_HASH=${_XMTPB_GIT_HASH}
+
+#
+# XMTPB_ENVIRONMENT is the environment we're running in
+#
+#
+
+if [ -z "${_XMTPB_ENVIRONMENT}" ]; then
+  echo "WARNING :: XMTPB_ENVIRONMENT is not set"
+fi
+
+export XMTPB_ENVIRONMENT=${_XMTPB_ENVIRONMENT}
+

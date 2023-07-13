@@ -17,6 +17,7 @@ model Bridge {
   hookToken        String
   instance         Instance?
   canaryAddress    String
+  webhookAddress   String
   forwardHandler   ForwardHandler @relation(fields: [forwardHandlerId], references: [id], onDelete: Cascade)
   forwardHandlerId String         @unique
 }
