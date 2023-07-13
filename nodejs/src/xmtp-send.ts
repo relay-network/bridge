@@ -1,6 +1,6 @@
 import { Client, Conversation, DecodedMessage } from "@xmtp/xmtp-js";
 
-type Send = ({
+export type Send = ({
   toAddress,
   toConversationId,
   msg,

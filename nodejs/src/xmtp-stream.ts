@@ -1,33 +1,50 @@
 import { Client, DecodedMessage } from "@xmtp/xmtp-js";
 
-export const createInterface = async ({
+type MessageHandler = ({
+  message,
+}: {
+  message: DecodedMessage;
+}) => Promise<void>;
+
+export const createInterface = ({
   createClient,
   onStreamCreated,
   onStreamCreateError,
   onMessage,
+  onAddListener,
   onListenerError,
   onError,
 }: {
   createClient: () => Promise<Client>;
   onStreamCreated: () => void;
   onStreamCreateError: ({ error }: { error: unknown }) => void;
-  onMessage: ({ message }: { message: DecodedMessage }) => void;
+  onAddListener: ({ name }: { name: string }) => void;
+  onMessage: ({
+    message,
+    listeners,
+  }: {
+    message: DecodedMessage;
+    listeners: string[];
+  }) => void;
   onListenerError: ({
+    name,
     message,
     error,
   }: {
+    name: string;
     message: DecodedMessage;
     error: unknown;
   }) => void;
   onError: ({ error }: { error: unknown }) => void;
 }) => {
-  const client = await createClient();
-
-  const listeners: Array<
-    ({ message }: { message: DecodedMessage }) => Promise<void>
-  > = [];
+  const listeners: Array<{
+    name: string;
+    handler: ({ message }: { message: DecodedMessage }) => Promise<void>;
+  }> = [];
 
   (async () => {
+    const client = await createClient();
+
     const stream = await (async () => {
       try {
         return await client.conversations.streamAllMessages();
@@ -51,7 +68,8 @@ export const createInterface = async ({
     (async () => {
       for await (const message of stream) {
         try {
-          onMessage({ message });
+          const namesOfListeners = listeners.map(({ name }) => name);
+          onMessage({ message, listeners: namesOfListeners });
         } catch (error) {
           onError({ error });
           throw new Error(
@@ -59,19 +77,24 @@ export const createInterface = async ({
           );
         }
 
-        for (const listener of listeners) {
-          listener({ message }).catch((error) => {
-            onListenerError({ message, error });
-            throw new Error(
-              "xmtp-stream.ts :: createInterface :: onListenerError did not throw"
-            );
+        for (const { name, handler } of listeners) {
+          handler({ message }).catch((error) => {
+            onListenerError({ name, message, error });
           });
         }
       }
     })();
   })();
 
-  return ({ handler }: { handler: () => Promise<void> }) => {
-    listeners.push(handler);
+  return (name: string, handler: MessageHandler) => {
+    try {
+      onAddListener({ name });
+    } catch (error) {
+      onError({ error });
+      throw new Error(
+        "xmtp-stream.ts :: createInterface :: onError did not throw"
+      );
+    }
+    listeners.push({ name, handler });
   };
 };

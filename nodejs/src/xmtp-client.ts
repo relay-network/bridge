@@ -18,13 +18,7 @@ export const createInterface = ({
   onSuccess: ({ client }: { client: Client }) => void;
   onError: ({ error }: { error: unknown }) => void;
 }) => {
-  let client: Client | null = null;
-
-  return async () => {
-    if (client !== null) {
-      return client;
-    }
-
+  const createClient = async () => {
     // We assume that the getPk function is part of another interface, so we
     // don't need to instrument it.
     const pk = await getPk();
@@ -58,7 +52,7 @@ export const createInterface = ({
       );
     }
 
-    client = await (async () => {
+    const client = await (async () => {
       try {
         return await Client.create(wallet, { env: "production" });
       } catch (error) {
@@ -76,6 +70,16 @@ export const createInterface = ({
       throw new Error(
         "xmtp-client.ts :: createClient :: onError did not throw"
       );
+    }
+
+    return client;
+  };
+
+  let client: Promise<Client> | null = null;
+
+  return () => {
+    if (client === null) {
+      client = createClient();
     }
 
     return client;
