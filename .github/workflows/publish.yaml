@@ -1,11 +1,11 @@
-name: bridge_deploy
+name: Publish docker image
 
 on:
   push:
     branches:
       - master
 jobs:
-  deploy-api:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
