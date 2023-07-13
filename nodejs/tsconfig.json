@@ -16,6 +16,6 @@
     "sourceMap": true,
     "declaration": true
   },
-  "include": ["src/**/*.ts", "mocha"],
+  "include": ["src/*.ts", "mocha"],
   "exclude": ["node_modules"]
 }

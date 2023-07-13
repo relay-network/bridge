@@ -19,6 +19,7 @@ const env = Interfaces.env({
     },
     include: {
       forwardHandler: true,
+      webhook: true,
     },
   });
 
@@ -85,7 +86,7 @@ const env = Interfaces.env({
         predicate: BridgeForward.createPredicate({
           blacklist: [
             bridgeConfig.canaryAddress,
-            bridgeConfig.webhookAddress,
+            bridgeConfig.webhook.ethAddress,
             env.XMTPB_BRIDGE_ADDRESS,
           ],
         }),
@@ -115,7 +116,7 @@ const env = Interfaces.env({
       Interfaces.xmtpHandler({
         name: "webhook-reverse",
         predicate: BridgeReverse.createPredicate({
-          whitelist: [bridgeConfig.webhookAddress],
+          whitelist: [bridgeConfig.webhook.ethAddress],
         }),
         zI: BridgeReverse.zI,
         impl: BridgeReverse.createHandler({

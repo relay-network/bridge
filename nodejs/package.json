@@ -8,7 +8,7 @@
   },
   "scripts": {
     "up": "node build/src/app.js",
-    "static:tsc": "prisma generate && tsc",
+    "static:tsc": "rm -rf build && prisma generate && tsc",
     "static:eslint": "eslint .",
     "static:prettier": "prettier --check .",
     "dev:tsc": "npx prisma generate && tsc --watch",
