@@ -51,6 +51,6 @@ jobs:
         uses: actions/checkout@v3
       - name: build docker image
         run: |
-          docker build -f docker/Dockerfile.express nodejs
+          docker build -f docker/Dockerfile nodejs
 
       
