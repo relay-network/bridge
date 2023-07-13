@@ -16,6 +16,7 @@
     "dev:test:run": ". ../shell/env.sh && mocha ./mocha/dev.test.ts",
     "dev:deps:up": ". ../shell/env.sh && docker compose -f ../docker/docker-compose.dev.yml up -d",
     "dev:deps:down": ". ../shell/env.sh && docker compose -f ../docker/docker-compose.dev.yml down",
+    "dev:db:pull": ". ../shell/env.sh && npx prisma db pull",
     "dev:db:generate": ". ../shell/env.sh && npx prisma migrate dev --create-only",
     "dev:db:deploy": ". ../shell/env.sh && npx prisma migrate deploy",
     "dev:db:studio": ". ../shell/env.sh && npx prisma studio",

@@ -17,9 +17,18 @@ model Bridge {
   hookToken        String
   instance         Instance?
   canaryAddress    String
-  webhookAddress   String
   forwardHandler   ForwardHandler @relation(fields: [forwardHandlerId], references: [id], onDelete: Cascade)
   forwardHandlerId String         @unique
+  webhook          Webhook        @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  webhookId        String
+}
+
+model Webhook {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  ethAddress String   @unique
+  bootKey    String
+  bridge     Bridge[]
 }
 
 model ForwardHandler {
