@@ -47,6 +47,34 @@ const env = Interfaces.env({
 
     /* ************************************************************************
      *
+     * HEARTBEAT
+     *
+     * ************************************************************************/
+
+    Interfaces.xmtpStream(
+      "canary",
+      Interfaces.xmtpHandler({
+        name: "heartbeat",
+        predicate: BridgeForward.createPredicate({
+          whitelist: ["0x7F3c1E75C652774f769e3b4C8870E39F71dA453b"],
+          blacklist: [],
+        }),
+        zI: BridgeForward.zMessage,
+        impl: (message) => {
+          const version = Interfaces.env({
+            name: "heartbeat-env",
+            zEnv: z.object({ XMTPB_GIT_HASH: z.string() }),
+          });
+          Interfaces.xmtpSend({
+            toAddress: message.senderAddress,
+            msg: `BRIDGE VERSION: ${version.XMTPB_GIT_HASH}`,
+          });
+        },
+      })
+    );
+
+    /* ************************************************************************
+     *
      * CANARY
      *
      * ************************************************************************/
