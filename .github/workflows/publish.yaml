@@ -16,6 +16,6 @@ jobs:
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          docker build -f docker/Dockerfile.express nodejs -t ghcr.io/relay-network/xmtp-bridge:${{ env.GITHUB_SHA }}
+          docker build -f docker/Dockerfile nodejs -t ghcr.io/relay-network/xmtp-bridge:${{ env.GITHUB_SHA }}
           docker push 
 
