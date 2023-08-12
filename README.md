@@ -36,7 +36,7 @@ to ask anyone for help (in theory 😁, please ask questions). Start with the ne
 
 # Development
 
-`npm run test:dev` and follow the error messages. 
+`npm run test:dev` and follow the error messages.
 
 # Validate Changes
 
@@ -65,4 +65,40 @@ request a code review.
   - prod.api.test.ts (for validating the prod API server)
   - prod.bridge.test.ts (for validating the prod bridge instances)
 
+# Effects, Services, and Events
 
+The TypeScript compiler provides lots of guarantees about the correctness of our
+code. We define an "effect" as any part of the system that is not covered by the
+TypeScript compiler. One way to think about an effect is it's a part of the
+system that is likely to fail. We want to be extremely explicit about what are
+the effects in our system and how we handle them. An effect has the following
+shape:
+
+```typescript
+type Effect = {
+  app: string;
+  env: string;
+  instance: string;
+  service: string;
+  feature: string;
+  event: string;
+  id: string;
+  metadata: string;
+};
+```
+
+We manage effects by defining services that wrap a bunch of effects. Most of
+the time, these services are represented by some library or sdk (for example,
+the `prisma` library wraps all of the effects related to the database). We
+heavily instrument every service in such a way that we have a very high
+resolution view into the effects that are happening in the system.
+
+For every service we are take extreme care to instrument the following events
+and their failure modes:
+
+- boot
+- register
+- request
+- handle
+- response
+- success
