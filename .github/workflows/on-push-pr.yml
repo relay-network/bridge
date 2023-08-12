@@ -59,7 +59,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
-      - name: typecheck
+      - name: compile
         run: source ./scripts.test.sh deps compile
   build:
     runs-on: ubuntu-latest
