@@ -14,70 +14,56 @@ jobs:
   deps:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
-      - name: deps
-        run: ./scripts.test.sh deps
+      - run: ./scripts.test.sh deps
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
-      - name: lint
-        run: ./scripts.test.sh deps lint
+      - run: ./scripts.test.sh deps lint
   format:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
-      - name: format
-        run: ./scripts.test.sh deps format
+      - run: ./scripts.test.sh deps format
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
-      - name: typecheck
-        run: ./scripts.test.sh deps typecheck
+      - run: ./scripts.test.sh deps typecheck
   compile:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
-      - name: compile
-        run: ./scripts.test.sh deps compile
+      - run: ./scripts.test.sh deps compile
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
-      - name: build
-        run: ./scripts.test.sh build
+      - run: ./scripts.test.sh build
   e2e:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
-      - name: e2e
-        run: ./scripts.test.sh
+      - run: ./scripts.test.sh
