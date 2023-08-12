@@ -83,7 +83,6 @@ function format () {
 }
 
 function typecheck () {
-  npx prisma generate
   npx tsc --noEmit
 }
 
@@ -92,7 +91,6 @@ function compile::nuke () {
 }
 
 function compile () {
-  npx prisma generate
   npx tsc
 }
 
