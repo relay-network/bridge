@@ -50,7 +50,7 @@ jobs:
         with:
           node-version: 18.15.0
       - name: typecheck
-        run: source ./scripts.test.sh deps typecheck
+        run: ./scripts.test.sh deps typecheck
   compile:
     runs-on: ubuntu-latest
     steps:
@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: 18.15.0
       - name: compile
-        run: source ./scripts.test.sh deps compile
+        run: ./scripts.test.sh deps compile
   build:
     runs-on: ubuntu-latest
     steps:
@@ -69,8 +69,8 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
-      - name: image
-        run: source ./scripts.test.sh build
+      - name: build
+        run: ./scripts.test.sh build
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -79,5 +79,5 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
-      - name: image
+      - name: e2e
         run: ./scripts.test.sh
