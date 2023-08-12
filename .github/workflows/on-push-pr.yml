@@ -8,7 +8,7 @@ env:
   APP_NAME: xmtp-bridge
   APP_ENV: ci
   APP_INSTANCE: ci
-  PG_CONNECTION_STRING: ${{ secrets.PG_CONNECTION_STRING }}
+  PG_CONNECTION_STRING: ${{ secrets.DEV_PG_CONNECTION_STRING }}
 
 jobs:
   deps:
