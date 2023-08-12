@@ -13,28 +13,18 @@ env:
 jobs:
   login:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: login to ghcr
-        run: ./scripts.pub.sh login
+      - uses: actions/checkout@v3
+      - run: ./scripts.pub.sh login
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Publish Docker image
-        run: ./scripts.pub.sh build
+      - uses: actions/checkout@v3
+      - run: ./scripts.pub.sh build
   publish:
-    needs: publish
     runs-on: ubuntu-latest
     steps:
-      - name: deploy
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 18.15.0
