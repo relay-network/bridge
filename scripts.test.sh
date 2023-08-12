@@ -1,134 +1,141 @@
 #!/bin/bash -e
 
+function main () {
+  if [ -z "${1}" ]; then
+    default
+  else
+    for fn in "${@}"; do
+      if [ "$(type -t "${fn}")" = "function" ]; then
+        "${fn}"
+      else 
+        echo "scripts.ci.sh :: ERROR :: function ${fn} does not exist. Exiting."
+        exit 1
+      fi
+    done
+  fi
+}
+
 # #############################################################################
 #
-# nuke previous test cluster
+# VARIABLES
 #
 # #############################################################################
 
-if [ -z "${1}" ] || [ "${1}" = "nuke" ]; then
-  docker rm --force \
-    rmkr-test-postgres \
-    rmkr-test-app \
-    rmkr-test-migrate \
-    rmkr-test-seed \
-    rmkr-test-e2e || true
+if [ -z "${PG_CONNECTION_STRING}" ]; then
+  echo "scripts.ci.sh :: ERROR :: PG_CONNECTION_STRING is not set. Exiting."
+  exit 1
+fi
 
-  docker network rm rmkr-test || true
+if [ -z "${APP_NAME}" ]; then
+  echo "scripts.dev.sh :: ERROR :: APP_NAME is not set. Exiting."
+  exit 1
+fi
+
+if [ -z "${APP_ENV}" ]; then
+  echo "scripts.dev.sh :: ERROR :: APP_ENV is not set. Exiting."
+  exit 1
+fi
+
+if [ -z "${APP_INSTANCE}" ]; then
+  echo "scripts.dev.sh :: ERROR :: APP_INSTANCE is not set. Exiting."
+  exit 1
 fi
 
 # #############################################################################
 #
-# install dependencies
+# WORKFLOWS
 #
 # #############################################################################
 
-if [ -z "${1}" ] || [ "${1}" = "deps" ]; then
+function default () {
+  deps
+  lint
+  format
+  typecheck
+  compile
+  webhook </dev/null >./build/"${APP_NAME}"-webhook.log 2>&1 &
+  canary </dev/null >./build/"${APP_NAME}"-canary.log 2>&1 &
+  bridge </dev/null >./build/"${APP_NAME}"-bridge.log 2>&1 &
+  e2e
+  build
+}
+
+# #############################################################################
+#
+# COMMANDS
+#
+# #############################################################################
+
+function deps::nuke () {
   rm -rf node_modules
+}
+
+function deps () {
   npm ci
-fi
+}
 
-# #############################################################################
-#
-# check for linter errors
-#
-# #############################################################################
-
-if [ -z "${1}" ] || [ "${1}" = "lint" ]; then
+function lint () {
   npx eslint --max-warnings=0 .
-fi
+}
 
-# #############################################################################
-#
-# check formatting
-#
-# #############################################################################
-
-if [ -z "${1}" ] || [ "${1}" = "format" ]; then
+function format () {
   npx prettier --check .
-fi
+}
 
-# #############################################################################
-#
-# validate types
-#
-# #############################################################################
-
-if [ -z "${1}" ] || [ "${1}" = "typecheck" ]; then
+function typecheck () {
   npx prisma generate
   npx tsc --noEmit
-fi
+}
+
+function compile::nuke () {
+  rm -rf build
+}
+
+function compile () {
+  npx prisma generate
+  npx tsc
+}
+
+function webhook () {
+  PG_CONNECTION_STRING="${PG_CONNECTION_STRING}" \
+  APP_NAME="${APP_NAME}" \
+  APP_ENV="${APP_ENV}" \
+  APP_INSTANCE="${APP_INSTANCE}" \
+  APP_SERVICE="webhook" \
+  node ./build/src/webhook.js
+}
+
+function canary () {
+  PG_CONNECTION_STRING="${PG_CONNECTION_STRING}" \
+  APP_NAME="${APP_NAME}" \
+  APP_ENV="${APP_ENV}" \
+  APP_INSTANCE="${APP_INSTANCE}" \
+  APP_SERVICE="canary" \
+  node ./build/src/canary.js
+}
+
+function bridge () {
+  PG_CONNECTION_STRING="${PG_CONNECTION_STRING}" \
+  APP_NAME="${APP_NAME}" \
+  APP_ENV="${APP_ENV}" \
+  APP_INSTANCE="${APP_INSTANCE}" \
+  APP_SERVICE="bridge" \
+  node ./build/src/app.js
+}
+
+function e2e () {
+  PG_CONNECTION_STRING="${PG_CONNECTION_STRING}" \
+  APP_NAME="${APP_NAME}" \
+  APP_ENV="${APP_ENV}" \
+  APP_INSTANCE="${APP_INSTANCE}" \
+  APP_SERVICE="end-to-end" \
+  npx mocha --exit ./build/mocha/e2e.js
+}
 
 # #############################################################################
 #
-# build docker image
+# EXECUTE
 #
 # #############################################################################
 
-if [ -z "${1}" ] || [ "${1}" = "image" ]; then
-  docker build . -t rmkr-test-image
-fi
-
-# #############################################################################
-#
-# spin up test cluster
-#
-# #############################################################################
-
-if [ -z "${1}" ] || [ "${1}" = "up" ]; then
-  docker network create rmkr-test
-
-  docker run \
-    --env POSTGRES_USER="postgres" \
-    --env POSTGRES_PASSWORD="postgres" \
-    --network rmkr-test \
-    --detach \
-    --name rmkr-test-postgres \
-    ankane/pgvector
-
-  sleep 3
-
-  docker run \
-    --env PG_CONNECTION_STRING="postgresql://postgres:postgres@rmkr-test-postgres:5432/postgres" \
-    --network rmkr-test \
-    --entrypoint "/usr/local/bin/npx" \
-    --name rmkr-test-migrate \
-    rmkr-test-image \
-    prisma migrate dev
-
-  docker run \
-    --env PG_CONNECTION_STRING="postgresql://postgres:postgres@rmkr-test-postgres:5432/postgres" \
-    --env OPENAI_API_KEY="${OPENAI_API_KEY}" \
-    --env APP_NAME="robot-maker" \
-    --env APP_ENV="test" \
-    --network rmkr-test \
-    --entrypoint "/usr/local/bin/npx" \
-    --name rmkr-test-seed \
-    rmkr-test-image \
-    mocha ./build/mocha/seed.js
-
-  docker run \
-    --env PG_CONNECTION_STRING="postgresql://postgres:postgres@rmkr-test-postgres:5432/postgres" \
-    --env APP_NAME="robot-maker" \
-    --env APP_ENV="test" \
-    --network rmkr-test \
-    --detach \
-    --name rmkr-test-app \
-    rmkr-test-image \
-    ./build/src/app.js
-fi
-
-# #############################################################################
-#
-# run end-to-end tests
-#
-# #############################################################################
-
-if [ -z "${1}" ] || [ "${1}" = "e2e" ]; then
-  docker run \
-    --network rmkr-test \
-    --entrypoint "/usr/local/bin/npx" \
-    --name rmkr-test-e2e \
-    rmkr-test-image \
-    mocha ./build/scripts.test.js
-fi
+[[ "${BASH_SOURCE[0]}" = "${0}" ]] && main "${@}"

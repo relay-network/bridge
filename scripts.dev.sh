@@ -1,152 +1,194 @@
 #!/bin/bash -e
 
+function main () {
+  if [ -z "${1}" ]; then
+    default
+  else
+    for fn in "${@}"; do
+      if [ "$(type -t "${fn}")" = "function" ]; then
+        "${fn}"
+      else 
+        echo "scripts.dev.sh :: ERROR :: function ${fn} does not exist. Exiting."
+        exit 1
+      fi
+    done
+  fi
+}
+
 # #############################################################################
 #
-# nuke previous artifacts
+# VARIABLES
 #
 # #############################################################################
 
-if [ -z "${1}" ] || [ "${1}" = "nuke" ]; then
+if [ -z "${PG_CONNECTION_STRING}" ]; then
+  echo "scripts.dev.sh :: ERROR :: PG_CONNECTION_STRING is not set. Exiting."
+  exit 1
+fi
+
+if [ -z "${APP_NAME}" ]; then
+  echo "scripts.dev.sh :: ERROR :: APP_NAME is not set. Exiting."
+  exit 1
+fi
+
+if [ -z "${APP_ENV}" ]; then
+  echo "scripts.dev.sh :: ERROR :: APP_ENV is not set. Exiting."
+  exit 1
+fi
+
+if [ -z "${APP_INSTANCE}" ]; then
+  echo "scripts.dev.sh :: ERROR :: APP_INSTANCE is not set. Exiting."
+  exit 1
+fi
+
+# #############################################################################
+#
+# WORKFLOWS
+#
+# #############################################################################
+
+function default () {
+  on_exit
+  deps::nuke
+  deps
+  compile::nuke
+  compile
+  compile::watch </dev/null &
+  webhook </dev/null &
+  canary </dev/null &
+  bridge </dev/null &
+  wait
+}
+
+function validate () {
+  on_exit
+  deps::nuke
+  deps
+  lint
+  format
+  typecheck
+  compile::nuke
+  compile
+  webhook </dev/null >./build/"${APP_NAME}"-webhook.log 2>&1 &
+  canary </dev/null >./build/"${APP_NAME}"-canary.log 2>&1 &
+  bridge </dev/null >./build/"${APP_NAME}"-bridge.log 2>&1 &
+  e2e
+  build
+}
+
+
+# #############################################################################
+#
+# COMMANDS
+#
+# #############################################################################
+
+function deps::nuke () {
   rm -rf node_modules
+}
 
-  rm -rf build
-
-  docker rm --force rm-dev-postgres
-
-  docker network rm rm-dev || true
-fi
-
-# #############################################################################
-#
-# install dependencies
-#
-# #############################################################################
-
-if [ -z "${1}" ] || [ "${1}" = "deps" ]; then
+function deps () {
   npm install
-fi
+}
 
-# #############################################################################
-#
-# check for linter errors
-#
-# #############################################################################
-
-if [ -z "${1}" ] || [ "${1}" = "lint" ]; then
+function lint () {
   npx eslint --max-warnings=0 .
-fi
+}
 
-# #############################################################################
-#
-# check formatting
-#
-# #############################################################################
-
-if [ -z "${1}" ] || [ "${1}" = "format" ]; then
+function format () {
   npx prettier --check .
-fi
+}
 
-# #############################################################################
-#
-# build the app (and typecheck)
-#
-# #############################################################################
+function typecheck () {
+  npx tsc --noEmit
+}
 
-if [ -z "${1}" ] || [ "${1}" = "build" ]; then
-  npx prisma generate
+function compile::nuke () {
+  rm -rf build
+}
+
+function compile () {
   npx tsc
-fi
+}
 
-# #############################################################################
-#
-# spin up database
-#
-# #############################################################################
+function build () {
+  docker build .
+}
 
-if [ -z "${1}" ] || [ "${1}" = "deps" ]; then
-  docker network create rm-dev
+function compile::watch () {
+  npx tsc --watch --preserveWatchOutput
+}
 
-  docker run \
-    --env POSTGRES_USER="postgres" \
-    --env POSTGRES_PASSWORD="postgres" \
-    --network rm-dev \
-    --detach \
-    -p "5432:5432" \
-    --name rm-dev-postgres \
-    ankane/pgvector
+function webhook () {
+  PG_CONNECTION_STRING="${PG_CONNECTION_STRING}" \
+  APP_NAME="${APP_NAME}" \
+  APP_ENV="${APP_ENV}" \
+  APP_INSTANCE="${APP_INSTANCE}" \
+  APP_SERVICE="webhook" \
+  npx nodemon -w build ./build/src/webhook.js
+}
 
-  sleep 3
-fi
+function canary () {
+  PG_CONNECTION_STRING="${PG_CONNECTION_STRING}" \
+  APP_NAME="${APP_NAME}" \
+  APP_ENV="${APP_ENV}" \
+  APP_INSTANCE="${APP_INSTANCE}" \
+  APP_SERVICE="canary" \
+  npx nodemon -w build ./build/src/canary.js
+}
 
-# #############################################################################
-#
-# migrate database
-#
-# #############################################################################
-
-if [ -z "${1}" ] || [ "${1}" = "migrate" ]; then
-  PG_CONNECTION_STRING="postgresql://postgres:postgres@localhost:5432/postgres" \
-  npx prisma migrate dev
-fi
-
-# #############################################################################
-#
-# seed database
-#
-# #############################################################################
-
-if [ -z "${1}" ] || [ "${1}" = "seed" ]; then
-  PG_CONNECTION_STRING="postgresql://postgres:postgres@localhost:5432/postgres" \
-  OPENAI_API_KEY="${OPENAI_API_KEY}" \
-  APP_NAME="robot-maker" \
-  APP_ENV="dev" \
-  npx mocha ./build/mocha/seed.js
-fi
-
-# #############################################################################
-#
-# run app server
-#
-# #############################################################################
-
-if [ "${1}" = "start" ]; then
-  PG_CONNECTION_STRING='postgresql://postgres:postgres@localhost:5432/postgres' \
-  APP_NAME="robot-maker" \
-  APP_ENV="dev" \
+function bridge () {
+  PG_CONNECTION_STRING="${PG_CONNECTION_STRING}" \
+  APP_NAME="${APP_NAME}" \
+  APP_ENV="${APP_ENV}" \
+  APP_INSTANCE="${APP_INSTANCE}" \
+  APP_SERVICE="bridge" \
   npx nodemon -w build ./build/src/app.js
-fi
+}
+
+function e2e () {
+  PG_CONNECTION_STRING="${PG_CONNECTION_STRING}" \
+  APP_NAME="${APP_NAME}" \
+  APP_ENV="${APP_ENV}" \
+  APP_INSTANCE="${APP_INSTANCE}" \
+  APP_SERVICE="end-to-end" \
+  npx mocha --exit ./build/mocha/e2e.js
+}
 
 # #############################################################################
 #
-# run discord bot
+# HELPERS
 #
 # #############################################################################
 
-if [ "${1}" = "discord" ]; then
-  PG_CONNECTION_STRING='postgresql://postgres:postgres@localhost:5432/postgres' \
-  APP_NAME="robot-maker" \
-  APP_ENV="dev" \
-  npx nodemon -w build ./build/src/discord.js
-fi
+function tlog () {
+  on_exit
+
+  for f in canary webhook bridge e2e; do
+    tail -F "./build/${APP_NAME}-${f}.log" | sed -e "s/^/[${f}] /" &
+  done
+
+  wait
+}
+
+function terr () {
+  on_exit
+
+  for f in canary webhook bridge e2e; do
+    tail -F "./build/${APP_NAME}-${f}.error.log"
+  done
+
+  wait
+}
+
+function on_exit () {
+  trap 'trap - SIGTERM && kill -- -$$' SIGINT SIGTERM EXIT
+}
 
 # #############################################################################
 #
-# run typescript compiler
+# EXECUTE MAIN
 #
 # #############################################################################
 
-if [ "${1}" = "tsc" ]; then
-  PG_CONNECTION_STRING='postgresql://postgres:postgres@localhost:5432/postgres' \
-  npx prisma generate && npx tsc --watch
-fi
-
-# #############################################################################
-#
-# run e2e tests
-#
-# #############################################################################
-
-if [ "${1}" = "test" ]; then
-  PG_CONNECTION_STRING='postgresql://postgres:postgres@localhost:5432/postgres' \
-  npx mocha build/scripts.dev.js
-fi
+[[ "${BASH_SOURCE[0]}" = "${0}" ]] && main "${@}"

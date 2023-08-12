@@ -17,6 +17,6 @@
     "declaration": true,
     "types": ["mocha", "node"]
   },
-  "include": ["src/**/*.ts", "mocha/*.ts", "./*.ts"],
+  "include": ["src/**/*.ts", "mocha/*.ts"],
   "exclude": ["node_modules"]
 }

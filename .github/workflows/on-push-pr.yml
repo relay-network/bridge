@@ -4,9 +4,11 @@ on:
   pull_request:
     types: []
 
-defaults:
-  run:
-    working-directory: ./phase-1a
+env:
+  APP_NAME: xmtp-bridge
+  APP_ENV: ci
+  APP_INSTANCE: ci
+  PG_CONNECTION_STRING: ${{ secrets.PG_CONNECTION_STRING }}
 
 jobs:
   deps:
@@ -18,7 +20,7 @@ jobs:
         with:
           node-version: 18.15.0
       - name: deps
-        run: ./test.sh deps
+        run: ./scripts.test.sh deps
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -28,7 +30,7 @@ jobs:
         with:
           node-version: 18.15.0
       - name: lint
-        run: ./test.sh deps && ./test.sh lint
+        run: ./scripts.test.sh deps lint
   format:
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +40,7 @@ jobs:
         with:
           node-version: 18.15.0
       - name: format
-        run: ./test.sh deps && ./test.sh format
+        run: ./scripts.test.sh deps format
   typecheck:
     runs-on: ubuntu-latest
     steps:
@@ -48,8 +50,18 @@ jobs:
         with:
           node-version: 18.15.0
       - name: typecheck
-        run: ./test.sh deps && ./test.sh typecheck
-  image:
+        run: source ./scripts.test.sh deps typecheck
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18.15.0
+      - name: typecheck
+        run: source ./scripts.test.sh deps compile
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -58,17 +70,7 @@ jobs:
         with:
           node-version: 18.15.0
       - name: image
-        run: ./test.sh image
-  up:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18.15.0
-      - name: image
-        run: ./test.sh image && ./test.sh up
+        run: source ./scripts.test.sh build
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -78,4 +80,4 @@ jobs:
         with:
           node-version: 18.15.0
       - name: image
-        run: ./test.sh image && ./test.sh up && ./test.sh e2e
+        run: ./scripts.test.sh

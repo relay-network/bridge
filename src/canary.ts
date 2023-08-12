@@ -1,6 +1,20 @@
 import { z } from "zod";
-import { iLogger, iExpress } from "./interfaces.js";
 import express from "express";
+import { sConfig } from "./stack/config.js";
+import { sLogger } from "./stack/effect.js";
+import { sExpressRoute } from "./stack/express-route.js";
+
+const logListening = sLogger.create({
+  api: "logger",
+  feature: "canary",
+  request: "listen",
+}).success;
+
+const expressConfig = sConfig.express();
+
+const route = sExpressRoute.create({
+  feature: "canary.ts",
+});
 
 const CANARY_MESSAGE_LOG: Array<{ content: string }> = [];
 
@@ -8,8 +22,7 @@ const app = express();
 
 app.use(express.json());
 
-iExpress({
-  effect: "canary",
+route("post a message from bridge")({
   server: app,
   url: "/canary",
   method: "post",
@@ -29,6 +42,7 @@ iExpress({
       }),
     }),
   }),
+  zParams: z.unknown(),
   zQuery: z.unknown(),
   zResponse: z.object({
     message: z.string(),
@@ -37,24 +51,27 @@ iExpress({
     CANARY_MESSAGE_LOG.push(b.message);
 
     return {
-      message: `Hello from the canary, the bridge ${b.bridgeAddress} sent the message ${b.message.content}`,
+      status: 200,
+      data: {
+        message: `Hello from the canary, the bridge ${b.bridgeAddress} sent the message ${b.message.content}`,
+      },
     };
   },
 });
 
-iExpress({
-  effect: "canary logs",
+route("canary logs")({
   server: app,
   url: "/logs",
   method: "get",
   zBody: z.unknown(),
   zQuery: z.unknown(),
+  zParams: z.unknown(),
   zResponse: z.array(z.object({ content: z.string() })),
   handler: async () => {
-    return CANARY_MESSAGE_LOG;
+    return { status: 200, data: CANARY_MESSAGE_LOG };
   },
 });
 
-app.listen("8080", () => {
-  iLogger.info("Canary listening on port 8080");
+app.listen(expressConfig.port, () => {
+  logListening(`Listening on port ${expressConfig.port}`);
 });

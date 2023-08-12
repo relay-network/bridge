@@ -1,0 +1,40 @@
+name: publish docker images
+
+on:
+  push:
+    branches:
+      - main
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_ACTOR: ${{ github.actor }}
+  GITHUB_SHA: ${{ github.sha }}
+
+jobs:
+  login:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: login to ghcr
+        run: ./scripts.pub.sh login
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Publish Docker image
+        run: ./scripts.pub.sh build
+  publish:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: deploy
+        uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18.15.0
+      - run: ./scripts.pub.sh
