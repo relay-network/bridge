@@ -94,6 +94,10 @@ function compile () {
   npx tsc
 }
 
+function build () {
+  docker build .
+}
+
 function webhook () {
   PG_CONNECTION_STRING="${PG_CONNECTION_STRING}" \
   APP_NAME="${APP_NAME}" \
